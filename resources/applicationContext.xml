@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:p="http://www.springframework.org/schema/p"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:jee="http://www.springframework.org/schema/jee"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xsi:schemaLocation="
+		http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.0.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.0.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.0.xsd
+		http://www.springframework.org/schema/jee http://www.springframework.org/schema/jee/spring-jee-4.0.xsd
+		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.0.xsd">
+
+    <!-- 配置读取.properties配置文件的工具类 -->
+    <bean id="propertyPlaceholderConfigurer"
+          class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+        <!-- 指定database.properties文件的路径 -->
+        <property name="location" value="classpath:database.properties"></property>
+    </bean>
+
+    <!-- 配置数据源 -->
+    <!--    <bean id="dataSource" class="com.alibaba.druid.pool.DruidDataSource">-->
+    <!--        <property name="url" value="jdbc:mysql://localhost:3306/interflow?useUnicode=true&amp;characterEncoding=UTF-8"/>-->
+    <!--        <property name="username" value="root"/>-->
+    <!--        <property name="password" value="123456"/>-->
+    <!--    </bean>-->
+
+    <bean id="basicDataSource" class="org.apache.commons.dbcp.BasicDataSource">
+        <!-- 配置driver -->
+        <property name="driverClassName" value="${driver}"></property>
+        <!-- 配置url -->
+        <property name="url" value="${url}"></property>
+        <!-- 配置username -->
+        <property name="username" value="${username}"></property>
+        <!-- 配置password -->
+        <property name="password" value="${password}"></property>
+    </bean>
+
+    <!-- 配置MyBatis的sqlSessionFactory -->  <!-- 扫描保存sql语句的局部配置xml文件 -->
+    <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <property name="dataSource" ref="basicDataSource"/>
+        <!-- 自动扫描mapper.xml文件 -->
+        <property name="mapperLocations" value="classpath:mappers/*.xml"/>
+        <!-- MyBatis配置文件 -->
+        <property name="configLocation" value="classpath:mybatis.xml"></property>
+    </bean>
+
+
+    <!-- DAO接口所在包名，Spring会自动扫描这个包下面的类 -->
+    <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <!--Dao层的位置-->
+        <property name="basePackage" value="com.java.mapper"/>
+        <property name="sqlSessionFactoryBeanName" value="sqlSessionFactory"/>
+    </bean>
+
+    <!-- 事务管理 -->
+    <bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <property name="dataSource" ref="basicDataSource"/>
+    </bean>
+    <!-- 配置事务通知属性 -->
+    <tx:advice id="txAdvice" transaction-manager="transactionManager">
+        <!-- 定义事务传播属性 -->
+        <tx:attributes>
+            <tx:method name="insert*" propagation="REQUIRED"/>
+            <tx:method name="update*" propagation="REQUIRED"/>
+            <tx:method name="edit*" propagation="REQUIRED"/>
+            <tx:method name="save*" propagation="REQUIRED"/>
+            <tx:method name="add*" propagation="REQUIRED"/>
+            <tx:method name="new*" propagation="REQUIRED"/>
+            <tx:method name="set*" propagation="REQUIRED"/>
+            <tx:method name="remove*" propagation="REQUIRED"/>
+            <tx:method name="delete*" propagation="REQUIRED"/>
+            <tx:method name="change*" propagation="REQUIRED"/>
+            <tx:method name="check*" propagation="REQUIRED"/>
+            <tx:method name="get*" propagation="REQUIRED" read-only="true"/>
+            <tx:method name="find*" propagation="REQUIRED" read-only="true"/>
+            <tx:method name="load*" propagation="REQUIRED" read-only="true"/>
+            <tx:method name="*" propagation="REQUIRED" read-only="true"/>
+        </tx:attributes>
+    </tx:advice>
+
+    <!-- 配置事务切面 -->
+    <aop:config>
+        <aop:pointcut expression="execution(* com.java.service.*.*(..))" id="serviceOperation"/>
+        <aop:advisor advice-ref="txAdvice" pointcut-ref="serviceOperation"/>
+    </aop:config>
+
+    <!-- 自动扫描 -->
+    <context:component-scan base-package="com.java.service"/>
+
+    <import resource="applicationContext_shiro.xml"/>
+</beans>

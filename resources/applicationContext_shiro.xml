@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:p="http://www.springframework.org/schema/p"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xsi:schemaLocation="
+       http://www.springframework.org/schema/beans
+       http://www.springframework.org/schema/beans/spring-beans-3.2.xsd
+       http://www.springframework.org/schema/context
+       http://www.springframework.org/schema/context/spring-context-3.2.xsd
+       http://www.springframework.org/schema/tx
+       http://www.springframework.org/schema/tx/spring-tx-3.2.xsd">
+
+    <!--配置shiro-->
+
+
+    <bean id="myRealm" class="com.java.realm.MyRealm">
+        <property name="credentialsMatcher">
+            <bean class="org.apache.shiro.authc.credential.HashedCredentialsMatcher">
+                <!--声明加密算法-->
+                <property name="hashAlgorithmName" value="sha-256"/>
+                <!--#true=hex格式 false=base64格式-->
+                <property name="storedCredentialsHexEncoded" value="false"/>
+                <!--加密次数-->
+                <property name="hashIterations" value="10000"/>
+            </bean>
+        </property>
+    </bean>
+    <!--配置SecurityManager 核心-->
+    <!--声明SecurityManager-->
+    <bean id="securityManager" class="org.apache.shiro.web.mgt.DefaultWebSecurityManager">
+        <!--将自定义的Realm注册给 核心控制 SecurityManager-->
+        <!--        <property name="realm" ref=""/>-->
+        <property name="authenticator" ref="authenticator"/>
+        <property name="realms">
+            <list>
+
+                <ref bean="myRealm"/>
+            </list>
+        </property>
+        <property name="rememberMeManager" ref="cookieRememberMeManager"/>
+        <property name="sessionManager" ref="sessionManager"/>
+    </bean>
+    <bean id="authenticator" class="org.apache.shiro.authc.pam.ModularRealmAuthenticator"></bean>
+
+    <!--声明ShiroFilter-->
+    <bean name="shiroFilter" class="org.apache.shiro.spring.web.ShiroFilterFactoryBean">
+        <!--注入核心对象-->
+        <property name="securityManager" ref="securityManager"/>
+        <!--没登录，没权限跳转页面-->
+        <property name="loginUrl" value="/login.html"/>
+        <property name="unauthorizedUrl" value="/login.html"/>
+        <property name="filterChainDefinitions">
+            <value>
+                /message.do=authc
+                /upload.do = authc
+                /show.html = authc
+                /logout = logout
+            </value>
+        </property>
+    </bean>
+    <!-- 记住密码-->
+    <bean id="simpleCookie" class="org.apache.shiro.web.servlet.SimpleCookie">
+        <property name="name" value="rememberMe"/>
+        <property name="httpOnly" value="true"/>
+        <property name="maxAge" value="864000"/> <!--保存10天-->
+    </bean>
+    <!--记住我管理器-->
+    <bean id="cookieRememberMeManager" class="org.apache.shiro.web.mgt.CookieRememberMeManager">
+        <property name="cookie" ref="simpleCookie"/>
+    </bean>
+
+    <!--会话Cookie模板 ,默认可以省略-->
+    <bean class="org.apache.shiro.web.servlet.SimpleCookie" id="sessionIdCookie">
+        <property name="name" value="JSESSIONID"/>
+        <property name="httpOnly" value="true"/>
+        <property name="maxAge" value="-1"></property>
+    </bean>
+    <bean class="org.apache.shiro.web.session.mgt.DefaultWebSessionManager" id="sessionManager">
+        <property name="sessionIdCookie" ref="sessionIdCookie"/>
+        <!--全局session过期时间 默认30分钟-->
+        <property name="globalSessionTimeout" value="1008000"/>
+    </bean>
+</beans>
